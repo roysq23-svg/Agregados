@@ -1,41 +1,51 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // <-- Ajustamos la ruta para importar useAuth
-import logoLlagas from '../assets/logo-llagas.png'; // <-- Importamos tu logotipo oficial
+import { useAuth } from '../context/AuthContext'; // <-- Verifica si necesitas un punto más: '../../context/AuthContext'
+import logoLlagas from '../assets/logo-llagas.png'; 
 
 export default function NavigationChofer() {
-  const { signOut } = useAuth(); // <-- Obtenemos la función de cerrar sesión del contexto
+  // NOTA: Si en tu AuthContext la función se llama 'logout', cambia aquí 'signOut' por 'logout'
+  const { signOut } = useAuth(); 
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      await signOut();
-      navigate('/login'); // Redirige al login tras cerrar sesión顺利
+      console.log("Intentando cerrar sesión...");
+      
+      // Si usas signOut en tu AuthContext:
+      if (signOut) {
+        await signOut();
+      } else {
+        console.warn("La función signOut no se encontró en el AuthContext. Verifica el nombre.");
+      }
+      
+      // Forzamos la redirección manual al login
+      navigate('/login'); 
     } catch (error) {
-      console.error('Error al cerrar sesión:', error.message);
+      alert('Error al cerrar sesión: ' + error.message);
     }
   };
 
   return (
-    <nav className="w-full bg-white border-b border-slate-200/80 fixed top-0 left-0 right-0 z-50 shadow-sm px-4 py-2 flex items-center justify-between">
+    <nav className="w-full bg-white border-b border-slate-200/80 fixed top-0 left-0 right-0 z-50 shadow-sm px-3 py-2 flex items-center justify-between gap-2">
       
-      {/* LOGO OFICIAL REEMPLAZADO */}
-      <div className="flex items-center gap-2">
+      {/* LOGO */}
+      <div className="flex items-center shrink-0">
         <img 
           src={logoLlagas} 
-          alt="Llagas Maquinaria y Agregados" 
-          className="h-9 w-auto object-contain" // Altura controlada para que encaje perfecto en la barra
+          alt="Llagas" 
+          className="h-8 w-auto object-contain" 
         />
       </div>
 
-      {/* SEGMENTED CONTROL / SELECTOR DE PESTAÑAS (Mantiene el estilo claro) */}
-      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/40">
+      {/* PESTAÑAS */}
+      <div className="flex items-center gap-0.5 bg-slate-100 p-1 rounded-xl border border-slate-200/40">
         <NavLink
           to="/chofer/registrar"
           className={({ isActive }) =>
-            `px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+            `px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
               isActive
-                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50 font-black'
+                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50'
                 : 'text-slate-500 hover:text-slate-800'
             }`
           }
@@ -46,9 +56,9 @@ export default function NavigationChofer() {
         <NavLink
           to="/chofer/gastos"
           className={({ isActive }) =>
-            `px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+            `px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
               isActive
-                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50 font-black'
+                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50'
                 : 'text-slate-500 hover:text-slate-800'
             }`
           }
@@ -59,9 +69,9 @@ export default function NavigationChofer() {
         <NavLink
           to="/chofer/historial"
           className={({ isActive }) =>
-            `px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+            `px-2.5 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
               isActive
-                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50 font-black'
+                ? 'bg-white text-emerald-700 shadow-sm border border-slate-200/50'
                 : 'text-slate-500 hover:text-slate-800'
             }`
           }
@@ -70,14 +80,15 @@ export default function NavigationChofer() {
         </NavLink>
       </div>
 
-      {/* BOTÓN CERRAR SESIÓN (ALINEADO A LA DERECHA) */}
+      {/* BOTÓN CERRAR SESIÓN */}
       <button
         onClick={handleLogout}
+        type="button"
         title="Cerrar Sesión"
-        className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1"
+        className="px-3 py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 border border-red-200/60 text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shrink-0"
       >
         <span>🚪</span>
-        <span className="hidden sm:inline">Salir</span>
+        <span>Salir</span> 
       </button>
 
     </nav>
