@@ -134,9 +134,25 @@ export default function RegistrarDespacho() {
         }));
 
         const { error: errorDetalles } = await supabase.from('detalle_movimientos').insert(detallesInsertar);
-        if (errorDetalles) throw errorDetalles;
+if (errorDetalles) throw errorDetalles;
 
-        setSuccessMsg('✅ ¡Viaje actualizado correctamente!');
+// ← NUEVO: sincronizar pagos_viaje al editar
+await supabase.from('pagos_viaje').delete().eq('movimiento_id', viajeAEditar.id);
+
+if (estadoPago === 'pagado' && totalDinero > 0) {
+  await supabase.from('pagos_viaje').insert({
+    movimiento_id: viajeAEditar.id,
+    monto: totalDinero
+  });
+}
+if (estadoPago === 'adelanto' && adelanto > 0) {
+  await supabase.from('pagos_viaje').insert({
+    movimiento_id: viajeAEditar.id,
+    monto: adelanto
+  });
+}
+
+setSuccessMsg('✅ ¡Viaje actualizado correctamente!');
         setTimeout(() => navigate('/chofer/historial'), 1500);
 
       } else {
@@ -163,12 +179,26 @@ export default function RegistrarDespacho() {
         }));
 
         const { error: errorDetalles } = await supabase
-          .from('detalle_movimientos')
-          .insert(detallesInsertar);
+  .from('detalle_movimientos')
+  .insert(detallesInsertar);
 
-        if (errorDetalles) throw errorDetalles;
+if (errorDetalles) throw errorDetalles;
 
-        setSuccessMsg('✅ ¡Despacho registrado con éxito!');
+// ← NUEVO: registrar pago en pagos_viaje
+if (estadoPago === 'pagado' && totalDinero > 0) {
+  await supabase.from('pagos_viaje').insert({
+    movimiento_id: inserted.id,
+    monto: totalDinero
+  });
+}
+if (estadoPago === 'adelanto' && adelanto > 0) {
+  await supabase.from('pagos_viaje').insert({
+    movimiento_id: inserted.id,
+    monto: adelanto
+  });
+}
+
+setSuccessMsg('✅ ¡Despacho registrado con éxito!');
         setClienteNombre('');
         setClienteCelular('');
         setMontoRecibido('');
