@@ -8,43 +8,46 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const checkUser = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
+useEffect(() => {
+  let initialized = false; // 👈 flag
 
-        if (currentUser) {
-          // Si hay usuario, buscamos su perfil antes de apagar el loading global
-          await buscarPerfil(currentUser);
-        } else {
-          // Si no hay sesión, apagamos el loading de inmediato para que vaya al Login
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Error inicializando usuario:", error);
-        setLoading(false);
-      }
-    };
-
-    checkUser();
-
-    // Escuchar cambios de estado (login/logout de Supabase)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+  const checkUser = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      
+
       if (currentUser) {
         await buscarPerfil(currentUser);
       } else {
-        setProfile(null);
         setLoading(false);
       }
-    });
+    } catch (error) {
+      console.error("Error inicializando usuario:", error);
+      setLoading(false);
+    } finally {
+      initialized = true; // 👈 marca que ya terminó
+    }
+  };
 
-    return () => subscription.unsubscribe();
-  }, []);
+  checkUser();
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (!initialized) return; // 👈 ignora el primer disparo si checkUser no terminó
+    
+    const currentUser = session?.user ?? null;
+    setUser(currentUser);
+    
+    if (currentUser) {
+      await buscarPerfil(currentUser);
+    } else {
+      setProfile(null);
+      setLoading(false);
+    }
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
 
   // Función inteligente amarrada al correo real de tu administración
   const buscarPerfil = async (authUser) => {
