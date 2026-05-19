@@ -22,7 +22,7 @@ export default function ControlGastos() {
       const { error } = await supabase
         .from('gastos_chofer')
         .insert({
-          chofer_id: profile.id, // Verifica si en tu base de datos es chofer_id o usuario_id según tu consulta de rendición
+          usuario_id: profile.uuid_auth, // ✅ corregido: era chofer_id
           descripcion: detalleFinal,
           monto: parseFloat(monto)
         });
@@ -40,11 +40,10 @@ export default function ControlGastos() {
   };
 
   return (
-    // CAMBIO DE ENTORNO: Pasamos de slate-900 a un fondo claro, fresco y ergonómico
     <div className="min-h-screen bg-slate-50 text-slate-800 p-4 pb-24 flex flex-col items-center">
       <div className="w-full max-w-md space-y-5">
-        
-        {/* ENCABEZADO MODO CLARO */}
+
+        {/* ENCABEZADO */}
         <div className="text-center py-4 bg-white rounded-2xl border border-slate-200/60 shadow-sm p-4">
           <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase flex items-center justify-center gap-2">
             <span>💰</span> Control de Gastos
@@ -54,17 +53,17 @@ export default function ControlGastos() {
           </p>
         </div>
 
-        {/* NOTIFICACIÓN DE ÉXITO PREMIUM */}
+        {/* NOTIFICACIÓN DE ÉXITO */}
         {successMsg && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold p-3.5 rounded-xl text-center shadow-sm animate-fade-in">
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold p-3.5 rounded-xl text-center shadow-sm">
             {successMsg}
           </div>
         )}
 
-        {/* FORMULARIO ESTILO TARJETA LIMPIA */}
+        {/* FORMULARIO */}
         <form onSubmit={handleRegistrarGasto} className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-md space-y-5">
-          
-          {/* INPUT MONTO */}
+
+          {/* MONTO */}
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
               Monto del Gasto (S/)
@@ -83,7 +82,7 @@ export default function ControlGastos() {
             </div>
           </div>
 
-          {/* SELECTOR DE CATEGORÍAS TÁCTIL */}
+          {/* CATEGORÍAS */}
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
               Categoría
@@ -115,7 +114,7 @@ export default function ControlGastos() {
             </div>
           </div>
 
-          {/* INPUT DETALLE */}
+          {/* DETALLE */}
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
               Detalle / Descripción (Opcional)
@@ -129,12 +128,12 @@ export default function ControlGastos() {
             />
           </div>
 
-          {/* BOTÓN PRINCIPAL EMERALD */}
+          {/* BOTÓN */}
           <div className="pt-2">
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl shadow-md hover:shadow-emerald-100 transition-all text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all text-xs uppercase tracking-wider cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
