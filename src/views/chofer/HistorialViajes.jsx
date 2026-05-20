@@ -9,7 +9,7 @@ export default function HistorialViajes() {
   const [fecha, setFecha] = useState(new Date().toISOString().split('T')[0]);
   const [viajes, setViajes] = useState([]);
   const [gastos, setGastos] = useState([]);
-  const [ingresosExtra, setIngresosExtra] = useState([]); // ← NUEVO
+  const [ingresosExtra, setIngresosExtra] = useState([]);
   const [pagosViaje, setPagosViaje] = useState({});
   const [loading, setLoading] = useState(false);
 
@@ -19,54 +19,69 @@ export default function HistorialViajes() {
   const [guardandoAbono, setGuardandoAbono] = useState(false);
 
   // Estado para confirmar eliminación
-  const [confirmarEliminar, setConfirmarEliminar] = useState(null); // viajeId
+  const [confirmarEliminar, setConfirmarEliminar] = useState(null);
   const [eliminando, setEliminando] = useState(false);
 
   useEffect(() => {
     fetchViajesYGastos();
   }, [fecha]);
 
+  // ── Helper: rango del día en UTC considerando UTC-5 (Perú) ──
+  const getRangoUTC = (fecha) => {
+    // Medianoche hora Perú = 05:00 UTC
+    const inicioDia = `${fecha}T05:00:00.000Z`;
+
+    // Fin del día Perú (23:59:59) = día siguiente 04:59:59 UTC
+    const fechaObj = new Date(`${fecha}T00:00:00`);
+    fechaObj.setDate(fechaObj.getDate() + 1);
+    const fechaSiguiente = fechaObj.toISOString().split('T')[0];
+    const finDia = `${fechaSiguiente}T04:59:59.999Z`;
+
+    return { inicioDia, finDia };
+  };
+
   const fetchViajesYGastos = async () => {
     if (!profile?.uuid_auth) return;
     setLoading(true);
     try {
-      const inicioDia = `${fecha}T00:00:00`;
-      const finDia = `${fecha}T23:59:59`;
+      const { inicioDia, finDia } = getRangoUTC(fecha);
 
-      // 1. Viajes del día
-      const { data: dataViajes, error: errorV } = await supabase
-        .from('movimientos')
-        .select('*, detalle_movimientos(*)')
-        .eq('usuario_id', profile.uuid_auth)
-        .gte('creado_en', inicioDia)
-        .lte('creado_en', finDia)
-        .order('creado_en', { ascending: false });
+      // ── Promise.all: las 3 consultas van al mismo tiempo ──
+      const [
+        { data: dataViajes, error: errorV },
+        { data: dataGastos, error: errorG },
+        { data: dataIngresos, error: errorI },
+      ] = await Promise.all([
+        supabase
+          .from('movimientos')
+          .select('*, detalle_movimientos(*)')
+          .eq('usuario_id', profile.uuid_auth)
+          .gte('creado_en', inicioDia)
+          .lte('creado_en', finDia)
+          .order('creado_en', { ascending: false }),
+
+        supabase
+          .from('gastos_chofer')
+          .select('*')
+          .eq('usuario_id', profile.uuid_auth)
+          .gte('creado_en', inicioDia)
+          .lte('creado_en', finDia)
+          .order('creado_en', { ascending: false }),
+
+        supabase
+          .from('ingresos_extra')
+          .select('*')
+          .eq('usuario_id', profile.uuid_auth)
+          .gte('creado_en', inicioDia)
+          .lte('creado_en', finDia)
+          .order('creado_en', { ascending: false }),
+      ]);
 
       if (errorV) throw errorV;
-
-      // 2. Gastos del día
-      const { data: dataGastos, error: errorG } = await supabase
-        .from('gastos_chofer')
-        .select('*')
-        .eq('usuario_id', profile.uuid_auth)
-        .gte('creado_en', inicioDia)
-        .lte('creado_en', finDia)
-        .order('creado_en', { ascending: false });
-
       if (errorG) throw errorG;
-
-      // 3. Ingresos extra del día ← NUEVO
-      const { data: dataIngresos, error: errorI } = await supabase
-        .from('ingresos_extra')
-        .select('*')
-        .eq('usuario_id', profile.uuid_auth)
-        .gte('creado_en', inicioDia)
-        .lte('creado_en', finDia)
-        .order('creado_en', { ascending: false });
-
       if (errorI) throw errorI;
 
-      // 4. Pagos de los viajes del día
+      // Pagos de viaje: solo si hay viajes (necesita los IDs primero)
       const idsViajes = (dataViajes || []).map((v) => v.id);
       let mapaPagos = {};
 
@@ -87,7 +102,7 @@ export default function HistorialViajes() {
 
       setViajes(dataViajes || []);
       setGastos(dataGastos || []);
-      setIngresosExtra(dataIngresos || []); // ← NUEVO
+      setIngresosExtra(dataIngresos || []);
       setPagosViaje(mapaPagos);
     } catch (error) {
       console.error('Error al cargar historial personal:', error.message);
@@ -104,21 +119,18 @@ export default function HistorialViajes() {
   const handleEliminarViaje = async (viajeId) => {
     setEliminando(true);
     try {
-      // Eliminar detalle_movimientos primero (FK)
       const { error: errorDetalle } = await supabase
         .from('detalle_movimientos')
         .delete()
         .eq('movimiento_id', viajeId);
       if (errorDetalle) throw errorDetalle;
 
-      // Eliminar pagos_viaje (FK)
       const { error: errorPagos } = await supabase
         .from('pagos_viaje')
         .delete()
         .eq('movimiento_id', viajeId);
       if (errorPagos) throw errorPagos;
 
-      // Eliminar el movimiento
       const { error: errorMov } = await supabase
         .from('movimientos')
         .delete()
@@ -157,11 +169,7 @@ export default function HistorialViajes() {
     .reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
 
   const totalGastosRuta = gastos.reduce((acc, g) => acc + (parseFloat(g.monto) || 0), 0);
-
-  // ← NUEVO: suma de ingresos extra
   const totalIngresosExtra = ingresosExtra.reduce((acc, i) => acc + (parseFloat(i.monto) || 0), 0);
-
-  // Dinero Total del Día = pagos cobrados + ingresos extra - gastos
   const efectivoEnBolsillo = totalPagosDelDia + totalIngresosExtra - totalGastosRuta;
 
   const deudasPorCobrar = viajes.reduce((acc, v) => {
@@ -382,7 +390,6 @@ export default function HistorialViajes() {
         {!loading && (viajes.length > 0 || gastos.length > 0 || ingresosExtra.length > 0) && (
           <div className="grid grid-cols-2 gap-2">
             <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl shadow-sm">
-              {/* ← NOMBRE CAMBIADO */}
               <span className="text-[9px] uppercase font-bold text-emerald-700 block">Dinero Total del Día</span>
               <span className="text-base font-black text-emerald-900 font-mono block mt-0.5">
                 S/ {efectivoEnBolsillo.toFixed(2)}
@@ -410,7 +417,7 @@ export default function HistorialViajes() {
         ) : (
           <div className="space-y-4">
 
-            {/* INGRESOS EXTRA ← NUEVO */}
+            {/* INGRESOS EXTRA */}
             {ingresosExtra.length > 0 && (
               <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
                 <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block">
@@ -481,7 +488,6 @@ export default function HistorialViajes() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          {/* BOTÓN EDITAR */}
                           <button
                             onClick={() => handleEditarViaje(viaje)}
                             className="p-1.5 bg-slate-100 text-slate-600 hover:bg-amber-100 hover:text-amber-700 rounded-lg transition-all border border-slate-200"
@@ -491,7 +497,6 @@ export default function HistorialViajes() {
                               <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
                             </svg>
                           </button>
-                          {/* BOTÓN ELIMINAR ← NUEVO */}
                           <button
                             onClick={() => setConfirmarEliminar(viaje.id)}
                             className="p-1.5 bg-slate-100 text-slate-600 hover:bg-red-100 hover:text-red-600 rounded-lg transition-all border border-slate-200"
@@ -607,7 +612,7 @@ export default function HistorialViajes() {
         )}
       </div>
 
-      {/* MODAL CONFIRMAR ELIMINAR ← NUEVO */}
+      {/* MODAL CONFIRMAR ELIMINAR */}
       {confirmarEliminar && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
