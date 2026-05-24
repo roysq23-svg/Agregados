@@ -1,26 +1,16 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // <-- Verifica si necesitas un punto más: '../../context/AuthContext'
+import { useAuth } from '../context/AuthContext';
 import logoLlagas from '../assets/logo-llagas.png'; 
 
 export default function NavigationChofer() {
-  // NOTA: Si en tu AuthContext la función se llama 'logout', cambia aquí 'signOut' por 'logout'
-  const { signOut } = useAuth(); 
+  const { logoutCompleto } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      console.log("Intentando cerrar sesión...");
-      
-      // Si usas signOut en tu AuthContext:
-      if (signOut) {
-        await signOut();
-      } else {
-        console.warn("La función signOut no se encontró en el AuthContext. Verifica el nombre.");
-      }
-      
-      // Forzamos la redirección manual al login
-      navigate('/login'); 
+      await logoutCompleto();
+      navigate('/login');
     } catch (error) {
       alert('Error al cerrar sesión: ' + error.message);
     }

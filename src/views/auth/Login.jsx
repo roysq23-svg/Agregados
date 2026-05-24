@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../api/supabaseClient';
 // Importa tu logotipo aquí (ajusta la ruta según dónde guardaste la imagen)
@@ -10,6 +10,23 @@ export default function Login() {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const revisarSesionActiva = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (isMounted && data?.session?.user) {
+        navigate('/', { replace: true });
+      }
+    };
+
+    revisarSesionActiva();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
